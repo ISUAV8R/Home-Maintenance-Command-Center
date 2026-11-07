@@ -1,6 +1,6 @@
 {
-  "name": "Home & Yard Command Center",
-  "short_name": "Home Yard",
+  "name": "Home Command Center",
+  "short_name": "Home Center",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#2b5876",
