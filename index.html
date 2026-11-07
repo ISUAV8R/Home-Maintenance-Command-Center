@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Home Maintenance Dashboard</title>
+
+<style>
+
+body{
+    margin:0;
+    padding:20px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+
+    background:
+    linear-gradient(
+        135deg,
+        #2b5876,
+        #4e4376,
+        #6d5dfc
+    );
+
+    min-height:100vh;
+}
+
+.container{
+    max-width:700px;
+    margin:auto;
+}
+
+.header{
+    text-align:center;
+    color:white;
+    margin-bottom:20px;
+}
+
+.summary{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.summary-card{
+    background:rgba(255,255,255,.15);
+    backdrop-filter:blur(15px);
+
+    border-radius:18px;
+    padding:15px;
+
+    color:white;
+    text-align:center;
+}
+
+.summary-number{
+    font-size:32px;
+    font-weight:bold;
+}
+
+.card{
+    background:white;
+
+    border-radius:20px;
+    padding:18px;
+
+    margin-bottom:15px;
+
+    box-shadow:0 5px 18px rgba(0,0,0,.15);
+}
+
+.item-title{
+    font-weight:bold;
+    font-size:20px;
+}
+
+.green{
+    color:#18a558;
+}
+
+.orange{
+    color:#d18b00;
+}
+
+.red{
+    color:#d93838;
+}
+
+button{
+    border:none;
+    border-radius:10px;
+
+    padding:10px 15px;
+
+    cursor:pointer;
+
+    color:white;
+    background:#4f8cff;
+}
+
+.complete-btn{
+    margin-top:10px;
+}
+
+.add-section{
+    background:white;
+    padding:20px;
+    border-radius:20px;
+    margin-top:20px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-bottom:10px;
+    box-sizing:border-box;
+}
+
+.add-btn{
+    width:100%;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="header">
+    <h1>🏠 Home Maintenance</h1>
+    <p>Home & Yard Command Center</p>
+</div>
+
+<div class="summary">
+
+<div class="summary-card">
+    <div id="overdueCount" class="summary-number">0</div>
+    <div>Overdue</div>
+</div>
+
+<div class="summary-card">
+    <div id="dueSoonCount" class="summary-number">0</div>
+    <div>Due Soon</div>
+</div>
+
+<div class="summary-card">
+    <div id="goodCount" class="summary-number">0</div>
+    <div>Good</div>
+</div>
+
+</div>
+
+<div id="maintenanceList"></div>
+
+<div class="add-section">
+
+<h2>Add Maintenance Item</h2>
+
+<input id="itemName"
+placeholder="Item Name">
+
+<input
+id="frequency"
+type="number"
+placeholder="Frequency (days)">
+
+<button
+class="add-btn"
+onclick="addItem()">
+Add Item
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const STORAGE_KEY="maintenanceItems";
+
+const defaults=[
+
+{
+name:"Furnace Filter",
+frequency:90
+},
+
+{
+name:"Smoke Detector Batteries",
+frequency:180
+},
+
+{
+name:"HVAC Service",
+frequency:365
+},
+
+{
+name:"Water Softener Salt",
+frequency:30
+},
+
+{
+name:"Water Heater Flush",
+frequency:365
+},
+
+{
+name:"Gutter Cleaning",
+frequency:180
+},
+
+{
+name:"Sump Pump Test",
+frequency:180
+}
+
+];
+
+function loadItems(){
+
+let items =
+JSON.parse(
+localStorage.getItem(STORAGE_KEY)
+);
+
+if(!items){
+
+const today=
+new Date()
+.toISOString()
+.split("T")[0];
+
+items=
+defaults.map(x=>({
+...x,
+lastCompleted:today
+}));
+
+saveItems(items);
+
+}
+
+return items;
+
+}
+
+function saveItems(items){
+localStorage.setItem(
+STORAGE_KEY,
+JSON.stringify(items)
+);
+}
+
+function render(){
+
+const items=loadItems();
+
+const list=
+document.getElementById(
+"maintenanceList"
+);
+
+list.innerHTML="";
+
+let overdue=0;
+let dueSoon=0;
+let good=0;
+
+items.forEach((item,index)=>{
+
+const today=new Date();
+
+const completed=
+new Date(item.lastCompleted);
+
+const dueDate=
+new Date(completed);
+
+dueDate.setDate(
+dueDate.getDate() +
+item.frequency
+);
+
+const daysRemaining=
+Math.ceil(
+(dueDate-today)/
+(1000*60*60*24)
