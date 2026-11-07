@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Home Command Center</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#4f8cff">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+
+body{
+    margin:0;
+    padding:20px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    background:linear-gradient(
+        135deg,
+        #2b5876,
+        #4e4376,
+        #6d5dfc
+    );
+    min-height:100vh;
+}
+
+.container{
+    max-width:800px;
+    margin:auto;
+}
+
+.header{
+    color:white;
+    text-align:center;
+    margin-bottom:25px;
+}
+
+.summary{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.summary-card{
+    background:rgba(255,255,255,.15);
+    backdrop-filter:blur(10px);
+    border-radius:15px;
+    color:white;
+    text-align:center;
+    padding:15px;
+}
+
+.summary-number{
+    font-size:32px;
+    font-weight:bold;
+}
+
+.card{
+    background:white;
+    border-radius:20px;
+    padding:18px;
+    margin-bottom:15px;
+    box-shadow:0 4px 15px rgba(0,0,0,.15);
+}
+
+.item-title{
+    font-size:20px;
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.green{
+    color:#18a558;
+    font-weight:bold;
+}
+
+.orange{
+    color:#d18b00;
+    font-weight:bold;
+}
+
+.red{
+    color:#d93838;
+    font-weight:bold;
+}
+
+.button-row{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+}
+
+button{
+    border:none;
+    border-radius:10px;
+    padding:10px 15px;
+    color:white;
+    cursor:pointer;
+}
+
+.complete-btn{
+    background:#4f8cff;
+}
+
+.delete-btn{
+    background:#d93838;
+}
+
+.add-section{
+    background:white;
+    border-radius:20px;
+    padding:20px;
+    margin-top:20px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-bottom:12px;
+    box-sizing:border-box;
+}
+
+.add-btn{
+    width:100%;
+    background:#4f8cff;
+    padding:14px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="header">
+    <h1>🏠 Home Maintenance</h1>
+    <p>Home Command Center</p>
+</div>
+
+<div class="summary">
+
+<div class="summary-card">
+    <div id="overdueCount" class="summary-number">0</div>
+    <div>Overdue</div>
+</div>
+
+<div class="summary-card">
+    <div id="dueSoonCount" class="summary-number">0</div>
+    <div>Due Soon</div>
+</div>
+
+<div class="summary-card">
+    <div id="goodCount" class="summary-number">0</div>
+    <div>Good</div>
+</div>
+
+</div>
+
+<div id="maintenanceList"></div>
+
+<div class="add-section">
+
+<h2>Add Maintenance Item</h2>
+
+<input
+id="itemName"
+placeholder="Item Name">
+
+<input
+id="frequency"
+type="number"
+placeholder="Frequency (days)">
+
+<button
+class="add-btn"
+onclick="addItem()">
+Add Item
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const STORAGE_KEY = "maintenanceItems";
+
+const defaults = [
+
+{
+name:"Furnace Filter",
+frequency:90
+},
+
+{
+name:"Smoke Detector Batteries",
+frequency:180
+},
+
+{
+name:"Gutter Cleaning",
+frequency:180
+},
+
+];
+
+function loadItems(){
+
+    let items =
+        JSON.parse(
+            localStorage.getItem(STORAGE_KEY)
+        );
+
+    if(!items){
+
+        const today =
+            new Date()
+            .toISOString()
+            .split("T")[0];
+
+        items = defaults.map(item => ({
+
+            ...item,
+
+            lastCompleted: today
+
+        }));
+
+        saveItems(items);
+    }
+
+    return items;
+}
+
+function saveItems(items){
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(items)
+    );
+}
+
+function render(){
+
+    const items = loadItems();
+
+    const today = new Date();
+
+    items.sort((a,b)=>{
+
+        const dueA =
+            new Date(a.lastCompleted);
+
+        dueA.setDate(
+            dueA.getDate() + a.frequency
+        );
+
+        const dueB =
+            new Date(b.lastCompleted);
+
+        dueB.setDate(
+            dueB.getDate() + b.frequency
+        );
+
+        return dueA - dueB;
+    });
+
+    saveItems(items);
+
+    let overdue = 0;
+    let dueSoon = 0;
+    let good = 0;
+
+    const list =
+        document.getElementById(
+            "maintenanceList"
+        );
+
+    list.innerHTML = "";
+
+    items.forEach((item,index)=>{
+
+        const dueDate =
+            new Date(item.lastCompleted);
+
+        dueDate.setDate(
+            dueDate.getDate() +
+            item.frequency
+        );
+
+        const daysRemaining =
+            Math.ceil(
+                (dueDate - today) /
+                (1000*60*60*24)
+            );
+
+        let statusClass;
+        let statusText;
+
+        if(daysRemaining < 0){
+
+            statusClass = "red";
+            statusText = "OVERDUE";
+            overdue++;
+
+        }else if(daysRemaining <= 30){
+
+            statusClass = "orange";
+            statusText = "DUE SOON";
+            dueSoon++;
+
+        }else{
+
+            statusClass = "green";
+            statusText = "GOOD";
+            good++;
+        }
+
+        const card =
+            document.createElement("div");
+
+        card.className = "card";
+
+        card.innerHTML = `
+
+            <div class="item-title">
+                ${item.name}
+            </div>
+
+            <div>
+                Last Completed:
+                ${item.lastCompleted}
+            </div>
+
+            <div class="${statusClass}">
+                ${statusText}
+            </div>
+
+            <div>
+                ${daysRemaining < 0
+                    ? `${Math.abs(daysRemaining)} days overdue`
+                    : `${daysRemaining} days remaining`
+                }
+            </div>
+
+            <div class="button-row">
+
+                <button
+                class="complete-btn"
+                onclick="markComplete(${index})">
+                Mark Complete
+                </button>
+
+                <button
+                style="background:#f5a623;"
+                onclick="editItem(${index})">
+                Edit
+                </button>
+
+                <button
+                class="delete-btn"
+                onclick="deleteItem(${index})">
+                Delete
+                </button>
+
+            </div>
+        `;
+
+        list.appendChild(card);
+    });
+
+    document.getElementById("overdueCount").textContent = overdue;
+    document.getElementById("dueSoonCount").textContent = dueSoon;
+    document.getElementById("goodCount").textContent = good;
+}
+
+function markComplete(index){
+
+    const items = loadItems();
+
+    items[index].lastCompleted =
+        new Date()
+        .toISOString()
+        .split("T")[0];
+
+    saveItems(items);
+
+    render();
+}
+
+function deleteItem(index){
+
+    const items = loadItems();
+
+    const itemName =
+        items[index].name;
+
+    const confirmed =
+        confirm(
+            `Delete "${itemName}"?`
+        );
+
+    if(!confirmed){
+        return;
+    }
+
+    items.splice(index,1);
+
+    saveItems(items);
+
+    render();
+}
+
+function editItem(index){
+
+    const items = loadItems();
+
+    const item = items[index];
+
+    const newName = prompt(
+        "Item Name:",
+        item.name
+    );
+
+    if(newName === null){
+        return;
+    }
+
+    const newFrequency = prompt(
+        "Frequency (days):",
+        item.frequency
+    );
+
+    if(newFrequency === null){
+        return;
+    }
+
+    const newDate = prompt(
+        "Last Completed Date (YYYY-MM-DD):",
+        item.lastCompleted
+    );
+
+    if(newDate === null){
+        return;
+    }
+
+    items[index] = {
+        name: newName.trim(),
+        frequency: Number(newFrequency),
+        lastCompleted: newDate
+    };
+
+    saveItems(items);
+
+    render();
+}
+
+function addItem(){
+
+    const name =
+        document.getElementById("itemName")
+        .value
+        .trim();
+
+    const frequency =
+        Number(
+            document.getElementById("frequency")
+            .value
+        );
+
+    if(name === ""){
+
+        alert(
+            "Please enter an item name."
+        );
+
+        return;
+    }
+
+    if(isNaN(frequency) ||
+       frequency <= 0){
+
+        alert(
+            "Please enter a valid frequency."
+        );
+
+        return;
+    }
+
+    const items =
+        loadItems();
+
+    items.push({
+
+        name:name,
+
+        frequency:frequency,
+
+        lastCompleted:
+            new Date()
+            .toISOString()
+            .split("T")[0]
+
+    });
+
+    saveItems(items);
+
+    document.getElementById("itemName").value = "";
+    document.getElementById("frequency").value = "";
+
+    render();
+}
+
+render();
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register(
+    "./service-worker.js"
+  );
+}
+
+</script>
+
+</body>
+</html>
