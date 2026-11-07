@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Home Maintenance Dashboard</title>
+<title>Home & Yard Command Center</title>
 
 <style>
 
@@ -12,27 +12,24 @@ body{
     margin:0;
     padding:20px;
     font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-
-    background:
-    linear-gradient(
+    background:linear-gradient(
         135deg,
         #2b5876,
         #4e4376,
         #6d5dfc
     );
-
     min-height:100vh;
 }
 
 .container{
-    max-width:700px;
+    max-width:800px;
     margin:auto;
 }
 
 .header{
-    text-align:center;
     color:white;
-    margin-bottom:20px;
+    text-align:center;
+    margin-bottom:25px;
 }
 
 .summary{
@@ -44,13 +41,11 @@ body{
 
 .summary-card{
     background:rgba(255,255,255,.15);
-    backdrop-filter:blur(15px);
-
-    border-radius:18px;
-    padding:15px;
-
+    backdrop-filter:blur(10px);
+    border-radius:15px;
     color:white;
     text-align:center;
+    padding:15px;
 }
 
 .summary-number{
@@ -60,64 +55,73 @@ body{
 
 .card{
     background:white;
-
     border-radius:20px;
     padding:18px;
-
     margin-bottom:15px;
-
-    box-shadow:0 5px 18px rgba(0,0,0,.15);
+    box-shadow:0 4px 15px rgba(0,0,0,.15);
 }
 
 .item-title{
-    font-weight:bold;
     font-size:20px;
+    font-weight:bold;
+    margin-bottom:8px;
 }
 
 .green{
     color:#18a558;
+    font-weight:bold;
 }
 
 .orange{
     color:#d18b00;
+    font-weight:bold;
 }
 
 .red{
     color:#d93838;
+    font-weight:bold;
+}
+
+.button-row{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
 }
 
 button{
     border:none;
     border-radius:10px;
-
     padding:10px 15px;
-
-    cursor:pointer;
-
     color:white;
-    background:#4f8cff;
+    cursor:pointer;
 }
 
 .complete-btn{
-    margin-top:10px;
+    background:#4f8cff;
+}
+
+.delete-btn{
+    background:#d93838;
 }
 
 .add-section{
     background:white;
-    padding:20px;
     border-radius:20px;
+    padding:20px;
     margin-top:20px;
 }
 
 input{
     width:100%;
-    padding:10px;
-    margin-bottom:10px;
+    padding:12px;
+    margin-bottom:12px;
     box-sizing:border-box;
 }
 
 .add-btn{
     width:100%;
+    background:#4f8cff;
+    padding:14px;
 }
 
 </style>
@@ -156,7 +160,8 @@ input{
 
 <h2>Add Maintenance Item</h2>
 
-<input id="itemName"
+<input
+id="itemName"
 placeholder="Item Name">
 
 <input
@@ -176,9 +181,9 @@ Add Item
 
 <script>
 
-const STORAGE_KEY="maintenanceItems";
+const STORAGE_KEY = "maintenanceItems";
 
-const defaults=[
+const defaults = [
 
 {
 name:"Furnace Filter",
@@ -219,215 +224,309 @@ frequency:180
 
 function loadItems(){
 
-let items =
-JSON.parse(
-localStorage.getItem(STORAGE_KEY)
-);
+    let items =
+        JSON.parse(
+            localStorage.getItem(STORAGE_KEY)
+        );
 
-if(!items){
+    if(!items){
 
-const today=
-new Date()
-.toISOString()
-.split("T")[0];
+        const today =
+            new Date()
+            .toISOString()
+            .split("T")[0];
 
-items=
-defaults.map(x=>({
-...x,
-lastCompleted:today
-}));
+        items = defaults.map(item => ({
 
-saveItems(items);
+            ...item,
 
-}
+            lastCompleted: today
 
-return items;
+        }));
 
+        saveItems(items);
+    }
+
+    return items;
 }
 
 function saveItems(items){
-localStorage.setItem(
-STORAGE_KEY,
-JSON.stringify(items)
-);
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(items)
+    );
 }
 
 function render(){
 
-const items=loadItems();
+    const items = loadItems();
 
-const list=
-document.getElementById(
-"maintenanceList"
-);
+    const today = new Date();
 
-list.innerHTML="";
+    items.sort((a,b)=>{
 
-let overdue=0;
-let dueSoon=0;
-let good=0;
+        const dueA =
+            new Date(a.lastCompleted);
 
-items.forEach((item,index)=>{
+        dueA.setDate(
+            dueA.getDate() + a.frequency
+        );
 
-const today=new Date();
+        const dueB =
+            new Date(b.lastCompleted);
 
-const completed=
-new Date(item.lastCompleted);
+        dueB.setDate(
+            dueB.getDate() + b.frequency
+        );
 
-const dueDate=
-new Date(completed);
+        return dueA - dueB;
+    });
 
-dueDate.setDate(
-dueDate.getDate() +
-item.frequency
-);
+    saveItems(items);
 
-const daysRemaining=
-Math.ceil(
-(dueDate-today)/
-(1000*60*60*24)
-);
+    let overdue = 0;
+    let dueSoon = 0;
+    let good = 0;
 
-let statusClass="green";
-let statusText="Good";
+    const list =
+        document.getElementById(
+            "maintenanceList"
+        );
 
-if(daysRemaining < 0){
-statusClass="red";
-statusText="OVERDUE";
-overdue++;
-}
-else if(daysRemaining <= 30){
-statusClass="orange";
-statusText="Due Soon";
-dueSoon++;
-}
-else{
-good++;
-}
+    list.innerHTML = "";
 
-const card=
-document.createElement("div");
+    items.forEach((item,index)=>{
 
-card.className="card";
+        const dueDate =
+            new Date(item.lastCompleted);
 
-card.innerHTML=`
+        dueDate.setDate(
+            dueDate.getDate() +
+            item.frequency
+        );
 
-<div class="item-title">
-${item.name}
-</div>
+        const daysRemaining =
+            Math.ceil(
+                (dueDate - today) /
+                (1000*60*60*24)
+            );
 
-<p>
-Last Completed:
-${item.lastCompleted}
-</p>
+        let statusClass;
+        let statusText;
 
-<p class="${statusClass}">
-${statusText}
-</p>
+        if(daysRemaining < 0){
 
-<p>
-${
-daysRemaining < 0
-?
-`${Math.abs(daysRemaining)} days overdue`
-:
-`${daysRemaining} days remaining`
-}
-</p>
+            statusClass = "red";
+            statusText = "OVERDUE";
+            overdue++;
 
-<button
-class="complete-btn"
-onclick="markComplete(${index})">
-Mark Complete
-</button>
-`;
+        }else if(daysRemaining <= 30){
 
-list.appendChild(card);
+            statusClass = "orange";
+            statusText = "DUE SOON";
+            dueSoon++;
 
-});
+        }else{
 
-document.getElementById(
-"overdueCount"
-).textContent=overdue;
+            statusClass = "green";
+            statusText = "GOOD";
+            good++;
+        }
 
-document.getElementById(
-"dueSoonCount"
-).textContent=dueSoon;
+        const card =
+            document.createElement("div");
 
-document.getElementById(
-"goodCount"
-).textContent=good;
+        card.className = "card";
 
+        card.innerHTML = `
+
+            <div class="item-title">
+                ${item.name}
+            </div>
+
+            <div>
+                Last Completed:
+                ${item.lastCompleted}
+            </div>
+
+            <div class="${statusClass}">
+                ${statusText}
+            </div>
+
+            <div>
+                ${daysRemaining < 0
+                    ? `${Math.abs(daysRemaining)} days overdue`
+                    : `${daysRemaining} days remaining`
+                }
+            </div>
+
+            <div class="button-row">
+
+                <button
+                class="complete-btn"
+                onclick="markComplete(${index})">
+                Mark Complete
+                </button>
+
+                <button
+                style="background:#f5a623;"
+                onclick="editItem(${index})">
+                Edit
+                </button>
+
+                <button
+                class="delete-btn"
+                onclick="deleteItem(${index})">
+                Delete
+                </button>
+
+            </div>
+        `;
+
+        list.appendChild(card);
+    });
+
+    document.getElementById("overdueCount").textContent = overdue;
+    document.getElementById("dueSoonCount").textContent = dueSoon;
+    document.getElementById("goodCount").textContent = good;
 }
 
 function markComplete(index){
 
-const items=
-loadItems();
+    const items = loadItems();
 
-items[index]
-.lastCompleted=
-new Date()
-.toISOString()
-.split("T")[0];
+    items[index].lastCompleted =
+        new Date()
+        .toISOString()
+        .split("T")[0];
 
-saveItems(items);
+    saveItems(items);
 
-render();
+    render();
+}
 
+function deleteItem(index){
+
+    const items = loadItems();
+
+    const itemName =
+        items[index].name;
+
+    const confirmed =
+        confirm(
+            `Delete "${itemName}"?`
+        );
+
+    if(!confirmed){
+        return;
+    }
+
+    items.splice(index,1);
+
+    saveItems(items);
+
+    render();
+}
+
+function editItem(index){
+
+    const items = loadItems();
+
+    const item = items[index];
+
+    const newName = prompt(
+        "Item Name:",
+        item.name
+    );
+
+    if(newName === null){
+        return;
+    }
+
+    const newFrequency = prompt(
+        "Frequency (days):",
+        item.frequency
+    );
+
+    if(newFrequency === null){
+        return;
+    }
+
+    const newDate = prompt(
+        "Last Completed Date (YYYY-MM-DD):",
+        item.lastCompleted
+    );
+
+    if(newDate === null){
+        return;
+    }
+
+    items[index] = {
+        name: newName.trim(),
+        frequency: Number(newFrequency),
+        lastCompleted: newDate
+    };
+
+    saveItems(items);
+
+    render();
 }
 
 function addItem(){
 
-const name=
-document.getElementById(
-"itemName"
-).value;
+    const name =
+        document.getElementById("itemName")
+        .value
+        .trim();
 
-const frequency=
-parseInt(
-document.getElementById(
-"frequency"
-).value
-);
+    const frequency =
+        Number(
+            document.getElementById("frequency")
+            .value
+        );
 
-if(!name || !frequency){
+    if(name === ""){
 
-alert(
-"Please enter a name and frequency."
-);
+        alert(
+            "Please enter an item name."
+        );
 
-return;
+        return;
+    }
 
-}
+    if(isNaN(frequency) ||
+       frequency <= 0){
 
-const items=
-loadItems();
+        alert(
+            "Please enter a valid frequency."
+        );
 
-items.push({
+        return;
+    }
 
-name,
-frequency,
+    const items =
+        loadItems();
 
-lastCompleted:
-new Date()
-.toISOString()
-.split("T")[0]
+    items.push({
 
-});
+        name:name,
 
-saveItems(items);
+        frequency:frequency,
 
-document.getElementById(
-"itemName"
-).value="";
+        lastCompleted:
+            new Date()
+            .toISOString()
+            .split("T")[0]
 
-document.getElementById(
-"frequency"
-).value="";
+    });
 
-render();
+    saveItems(items);
 
+    document.getElementById("itemName").value = "";
+    document.getElementById("frequency").value = "";
+
+    render();
 }
 
 render();
