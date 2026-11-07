@@ -285,5 +285,154 @@ item.frequency
 const daysRemaining=
 Math.ceil(
 (dueDate-today)/
-(1000*60*60*24))
-    
+(1000*60*60*24)
+);
+
+let statusClass="green";
+let statusText="Good";
+
+if(daysRemaining < 0){
+statusClass="red";
+statusText="OVERDUE";
+overdue++;
+}
+else if(daysRemaining <= 30){
+statusClass="orange";
+statusText="Due Soon";
+dueSoon++;
+}
+else{
+good++;
+}
+
+const card=
+document.createElement("div");
+
+card.className="card";
+
+card.innerHTML=`
+
+<div class="item-title">
+${item.name}
+</div>
+
+<p>
+Last Completed:
+${item.lastCompleted}
+</p>
+
+<p class="${statusClass}">
+${statusText}
+</p>
+
+<p>
+${
+daysRemaining < 0
+?
+`${Math.abs(daysRemaining)} days overdue`
+:
+`${daysRemaining} days remaining`
+}
+</p>
+
+<button
+class="complete-btn"
+onclick="markComplete(${index})">
+Mark Complete
+</button>
+`;
+
+list.appendChild(card);
+
+});
+
+document.getElementById(
+"overdueCount"
+).textContent=overdue;
+
+document.getElementById(
+"dueSoonCount"
+).textContent=dueSoon;
+
+document.getElementById(
+"goodCount"
+).textContent=good;
+
+}
+
+function markComplete(index){
+
+const items=
+loadItems();
+
+items[index]
+.lastCompleted=
+new Date()
+.toISOString()
+.split("T")[0];
+
+saveItems(items);
+
+render();
+
+}
+
+function addItem(){
+
+const name=
+document.getElementById(
+"itemName"
+).value;
+
+const frequency=
+parseInt(
+document.getElementById(
+"frequency"
+).value
+);
+
+if(!name || !frequency){
+
+alert(
+"Please enter a name and frequency."
+);
+
+return;
+
+}
+
+const items=
+loadItems();
+
+items.push({
+
+name,
+frequency,
+
+lastCompleted:
+new Date()
+.toISOString()
+.split("T")[0]
+
+});
+
+saveItems(items);
+
+document.getElementById(
+"itemName"
+).value="";
+
+document.getElementById(
+"frequency"
+).value="";
+
+render();
+
+}
+
+render();
+
+</script>
+
+</body>
+</html>
